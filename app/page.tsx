@@ -1,69 +1,115 @@
+
+"use client";
+
+import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+
+interface Movie {
+  Title: string;
+  Year: string;
+  imdbID: string;
+  Poster: string;
+}
 
 export default function Home() {
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const fetchMovies = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const query = search.trim() || "Avengers";
+
+        const response = await fetch(
+          `/api/movies?search=${encodeURIComponent(query)}`
+        );
+
+        const data = await response.json();
+
+        if (data.Response === "True") {
+          setMovies(data.Search);
+        } else {
+          setMovies([]);
+          setError(data.Error || "No movies found");
+        }
+      } catch {
+        setMovies([]);
+        setError("Failed to load movies");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMovies();
+  }, [search]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <main className="min-h-screen bg-gray-950 px-6 py-10 text-white">
+      <h1 className="mb-4 text-center text-4xl font-bold text-red-500">
+        Movie Explorer
+      </h1>
+
+      <p className="mb-8 text-center text-gray-400">
+        Discover your favorite movies
+      </p>
+
+      <input
+        type="text"
+        placeholder="Search movies..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="search-input"
+      />
+
+      {loading && (
+        <p className="mb-6 text-center text-gray-300">
+          Loading movies...
+        </p>
+      )}
+
+      {error && (
+        <p className="mb-6 text-center text-red-500">{error}</p>
+      )}
+
+      {!loading && !error && movies.length === 0 && (
+        <p className="text-center text-gray-300">No Movies Found!</p>
+      )}
+
+      <div className="movie-grid">
+        {!loading &&
+          movies.map((movie) => (
+            <Link
+              href={`/movie/${movie.imdbID}`}
+              key={movie.imdbID}
+              className="movie-card"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+              {movie.Poster !== "N/A" ? (
+                <Image
+                  src={movie.Poster}
+                  alt={movie.Title}
+                  width={300}
+                  height={400}
+                  loading='eager'
+                  unoptimized
+                  className="h-64 w-full rounded-lg object-cover"
+                />
+              ) : (
+                <div className="flex h-64 items-center justify-center rounded-lg bg-gray-800 text-gray-400">
+                  No Poster Available
+                </div>
+              )}
+
+              <h2>{movie.Title}</h2>
+              <p>{movie.Year}</p>
+            </Link>
+          ))}
+      </div>
+    </main>
   );
 }
